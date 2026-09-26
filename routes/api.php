@@ -4,6 +4,7 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\SubjectController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\Routing\RouterInterface;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -24,4 +25,5 @@ Route::prefix('/subject')->group(function () {
     Route::post('/', [SubjectController::class, 'create']);
     Route::put('/{id}', [SubjectController::class, 'update']);
     Route::delete('/{id}', [SubjectController::class, 'delete']);
+    
 });

@@ -8,31 +8,41 @@ use Illuminate\Http\Request;
 class SubjectController extends Controller
 {
     public function index(Request $request)
-    {
-        $subjects = Subject::paginate();
+{
+    $query = Subject::query();
 
-        return [
-         'success' => true,
+    if ($request->filled('q')) {
+        $query->where('subject_name', 'like', '%' . $request->query('q') . '%');
+    }
+
+    if ($request->filled('credits')) {
+        $query->where('credits', $request->query('credits'));
+    }
+
+    $allowedSorts = ['created_at', 'subject_name', 'credits'];
+
+    $sort = in_array($request->query('sort'), $allowedSorts, true)
+        ? $request->query('sort')
+        : 'created_at';
+
+    $order = $request->query('order', 'desc');
+
+    $subjects = $query
+        ->orderBy($sort, $order)
+        ->paginate($request->integer('per_page', 10));
+
+    return [
+        'success' => true,
         'message' => 'Lay danh sach thanh cong',
-        'data' => $subjects->items()
-        ];
-    }
-
-    public function create(Request $request)
-    {
-        $data = $request->all();
-
-        $subject = Subject::create([
-            'subject_name' => $data['subject_name'],
-            'credits' => $data['credits']
-        ]);
-
-        return [
-            'success' => true,
-            'message' => 'Tao thanh cong',
-            'data' => $subject
-        ];
-    }
+        'data' => $subjects->items(),
+        'meta' => [
+            'total' => $subjects->total(),
+            'per_page' => $subjects->perPage(),
+            'current_page' => $subjects->currentPage(),
+            'last_page' => $subjects->lastPage()
+        ]
+    ];
+}
 
     public function show($id)
     {
