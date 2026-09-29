@@ -5,81 +5,83 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StudentRequest;
 use App\Models\Student;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class StudentController extends Controller
 {
     public function index(Request $request)
-{
-    $query = Student::query();
+    {
+        $query = Student::with('subject');
 
-    if ($request->filled('q')) {
-        $query->where('full_name', 'like', '%' . $request->query('q') . '%');
+        if ($request->filled('q')) {
+            $query->where(
+                'full_name',
+                'like',
+                '%' . $request->query('q') . '%'
+            );
+        }
+
+        if ($request->filled('subject_id')) {
+            $query->where(
+                'subject_id',
+                $request->query('subject_id')
+            );
+        }
+
+        $allowedSorts = [
+            'created_at',
+            'full_name',
+            'phone'
+        ];
+
+        $sort = in_array(
+            $request->query('sort'),
+            $allowedSorts,
+            true
+        )
+            ? $request->query('sort')
+            : 'created_at';
+
+        $order = $request->query('order', 'desc');
+
+        $students = $query
+            ->orderBy($sort, $order)
+            ->paginate(
+                $request->integer('per_page', 10)
+            );
+
+        return [
+            'success' => true,
+            'message' => 'Lay danh sach thanh cong',
+            'data' => $students->items(),
+            'meta' => [
+                'total' => $students->total(),
+                'per_page' => $students->perPage(),
+                'current_page' => $students->currentPage(),
+                'last_page' => $students->lastPage()
+            ]
+        ];
     }
 
-    if ($request->filled('subject_id')) {
-        $query->where('subject_id', $request->query('subject_id'));
+    public function store(StudentRequest $request)
+    {
+        $data = $request->validated();
+
+        $student = Student::create([
+            'full_name' => $data['full_name'],
+            'phone' => $data['phone'],
+            'subject_id' => $data['subject_id']
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tao thanh cong',
+            'data' => $student
+        ], 200);
     }
-
-    $allowedSorts = ['created_at', 'full_name', 'phone'];
-
-    $sort = in_array($request->query('sort'), $allowedSorts, true)
-        ? $request->query('sort')
-        : 'created_at';
-
-    $order = $request->query('order', 'desc');
-
-    $students = $query
-        ->orderBy($sort, $order)
-        ->paginate($request->integer('per_page', 10));
-
-    return [
-        'success' => true,
-        'message' => 'Lay danh sach thanh cong',
-        'data' => $students->items(),
-        'meta' => [
-            'total' => $students->total(),
-            'per_page' => $students->perPage(),
-            'current_page' => $students->currentPage(),
-            'last_page' => $students->lastPage()
-        ]
-    ];
-}
-
-   public function store(StudentRequest $request)
-{
-    // $validator = Validator::make($request->all(), [
-    //     'full_name' => ['required', 'string', 'max:255'],
-    //     'phone' => ['required', 'string', 'max:20'],
-    //     'subject_id' => ['required', 'unique:subjects,id'],
-    // ]);
-
-    // if ($validator->fails()) {
-    //     return response()->json([
-    //         'success' => false,
-    //         'message' => 'Du lieu khong hop le',
-    //         'errors' => $validator->errors(),
-    //     ], 400);
-    // }
-
-    $data = $request->validated();
-
-    $student = Student::create([
-        'full_name' => $data['full_name'],
-        'phone' => $data['phone'],
-        'subject_id' => $data['subject_id']
-    ]);
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Tao thanh cong',
-        'data' => $student
-    ], 200);
-}
 
     public function show($id)
     {
-        $student = Student::find($id);
+        $student = Student::with('subject')->find($id);
 
         if (!$student) {
             return [
@@ -108,7 +110,7 @@ class StudentController extends Controller
             ];
         }
 
-        $data = $request->validate(null);
+        $data = $request->validated();
 
         $student->update([
             'full_name' => $data['full_name'],
@@ -144,3 +146,7 @@ class StudentController extends Controller
         ];
     }
 }
+
+
+
+
